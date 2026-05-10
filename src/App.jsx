@@ -1,7 +1,7 @@
 import { useState, useCallback, useRef, useEffect } from "react";
 import MonacoEditor from "@monaco-editor/react";
 import { Toaster, toast } from "react-hot-toast";
-import { Terminal, FlaskConical, FileCode, Copy } from "lucide-react";
+import { Terminal, FlaskConical, FileCode, Copy, BookOpen } from "lucide-react";
 import Navbar from "./components/Navbar";
 import SnippetPanel from "./components/SnippetPanel";
 import TestCases from "./components/TestCases";
@@ -16,6 +16,7 @@ import { modLabel } from "./utils/platform";
 import { ensureThemeLoaded } from "./utils/themes";
 import { registerCppIntellisense } from "./utils/intellisense";
 import { formatCode } from "./utils/formatter";
+import ProblemStatement from "./components/ProblemStatement";
 
 const LS_CODE   = "cpped_code";
 const LS_INPUT  = "cpped_input";
@@ -415,6 +416,7 @@ export default function App() {
             {[
               { id: "io",    icon: <Terminal size={12} />,     label: "I/O" },
               { id: "cases", icon: <FlaskConical size={12} />, label: "Test Cases" },
+              { id: "problem", icon: <BookOpen size={12} />, label: "Problem" },
             ].map((t) => (
               <button
                 key={t.id}
@@ -487,7 +489,7 @@ export default function App() {
               </div>
 
             </div>
-          ) : (
+          ) : tab === "cases" ? (
             <div className="flex flex-1 min-h-0 flex-col overflow-hidden">
               <CodeforcesImport
                 onImported={handleCodeforcesImported}
@@ -502,6 +504,8 @@ export default function App() {
                 importedCases={importedCases}
               />
             </div>
+          ) : (
+            <ProblemStatement problem={currentProblem} />
           )}
 
         </div>

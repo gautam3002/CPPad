@@ -170,3 +170,27 @@ nav {
 [data-panel-resize-handle-enabled][data-resize-handle-active] {
   background-color: #58a6ff !important;
 }
+
+/* Codeforces problem statement styles */
+.cf-html p {
+  margin-bottom: 0.5rem;
+  color: #c9d1d9;
+}
+
+.cf-html ul,
+.cf-html ol {
+  padding-left: 1.25rem;
+  margin-bottom: 0.5rem;
+}
+
+.cf-html li {
+  margin-bottom: 0.25rem;
+}
+
+.cf-html .section-title {
+  display: none;
+}
+
+.cf-html mjx-container {
+  color: #e6edf3;
+}
