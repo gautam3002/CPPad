@@ -1,12 +1,13 @@
 import { useState } from "react";
-import { DownloadCloud, Loader2, Clock3, XCircle } from "lucide-react";
+import { DownloadCloud, Loader2, Clock3, XCircle, ExternalLink, Copy } from "lucide-react";
+import { toast } from "react-hot-toast";
 import {
   findCachedCodeforcesImport,
   getRecentCodeforcesImports,
   importCodeforcesProblem,
 } from "../utils/codeforces";
 
-export default function CodeforcesImport({ onImported, currentProblem }) {
+export default function CodeforcesImport({ onImported, currentProblem, code }) {
   const [query, setQuery] = useState("");
   const [status, setStatus] = useState("idle");
   const [error, setError] = useState("");
@@ -36,6 +37,18 @@ export default function CodeforcesImport({ onImported, currentProblem }) {
     }
   };
 
+  const handleSubmit = () => {
+    if (!currentProblem?.url) return;
+
+    const submitUrl = currentProblem.url.replace("/problem/", "/submit/");
+
+    navigator.clipboard.writeText(code || "").then(() => {}).catch(() => {
+      toast.error("Could not copy code automatically.");
+    });
+
+    window.open(submitUrl, "_blank", "noreferrer");
+  };
+
   const busy = status === "importing" || status === "parsing";
 
   return (
@@ -44,6 +57,7 @@ export default function CodeforcesImport({ onImported, currentProblem }) {
         {currentProblem?.title && (
           <div className="rounded-md border border-[#30363d] bg-[#161b22] px-2.5 py-2">
             <div className="text-[10px] uppercase tracking-wider text-[#8b949e]">Problem</div>
+
             <a
               href={currentProblem.url}
               target="_blank"
@@ -53,11 +67,22 @@ export default function CodeforcesImport({ onImported, currentProblem }) {
             >
               {currentProblem.title}
             </a>
+
             <div className="mt-1 flex flex-wrap gap-2 text-[10px] text-[#8b949e]">
               <span>{currentProblem.samples?.length || 0} samples</span>
               {currentProblem.metadata?.timeLimit && <span>{currentProblem.metadata.timeLimit}</span>}
               {currentProblem.metadata?.memoryLimit && <span>{currentProblem.metadata.memoryLimit}</span>}
             </div>
+
+            <button
+              type="button"
+              onClick={handleSubmit}
+              className="mt-2 inline-flex w-full items-center justify-center gap-1.5 rounded-md bg-[#1f6feb] px-3 py-1.5 text-[11px] font-semibold text-white transition-colors hover:bg-[#388bfd]"
+            >
+              <Copy size={11} />
+              Submit on Codeforces
+              <ExternalLink size={11} />
+            </button>
           </div>
         )}
 
@@ -76,13 +101,18 @@ export default function CodeforcesImport({ onImported, currentProblem }) {
             disabled={busy}
             className="min-w-0 flex-1 rounded-md border border-[#30363d] bg-[#161b22] px-2.5 py-1.5 text-xs text-[#e6edf3] placeholder-[#484f58] outline-none transition-colors focus:border-[#58a6ff] disabled:opacity-60"
           />
+
           <button
             type="submit"
             disabled={busy}
             className="inline-flex items-center justify-center gap-1.5 rounded-md border border-[#30363d] bg-[#21262d] px-3 py-1.5 text-xs font-semibold text-[#e6edf3] transition-colors hover:border-[#58a6ff] hover:text-[#58a6ff] disabled:cursor-not-allowed disabled:opacity-60"
           >
             {busy ? <Loader2 size={13} className="animate-spin" /> : <DownloadCloud size={13} />}
-            {status === "importing" ? "Importing..." : status === "parsing" ? "Parsing..." : "Import from Codeforces"}
+            {status === "importing"
+              ? "Importing..."
+              : status === "parsing"
+                ? "Parsing..."
+                : "Import from Codeforces"}
           </button>
         </form>
 
