@@ -492,6 +492,7 @@ export default function App() {
               <CodeforcesImport
                 onImported={handleCodeforcesImported}
                 currentProblem={currentProblem}
+                code={code}
               />
               <TestCases
                 key={importVersion}
