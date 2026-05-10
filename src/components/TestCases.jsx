@@ -1,11 +1,21 @@
 import { useState } from "react";
 import { Plus, Trash2, Play, CheckCircle2, XCircle } from "lucide-react";
-import { runCode, getVerdict } from "../utils/judge0";
+import { runCode } from "../utils/judge0";
 
-export default function TestCases({ code, langId, compilerOptions }) {
-  const [cases, setCases] = useState([
-    { id: 1, input: "", expected: "", output: "", status: null },
-  ]);
+export default function TestCases({ code, langId, compilerOptions, importedCases }) {
+  const [cases, setCases] = useState(() => {
+    if (importedCases?.length) {
+      return importedCases.map((tc, index) => ({
+        id: `${Date.now()}-${index}`,
+        input: tc.input || "",
+        expected: tc.expected || "",
+        output: "",
+        status: null,
+      }));
+    }
+
+    return [{ id: 1, input: "", expected: "", output: "", status: null }];
+  });
   const [running, setRunning] = useState(false);
 
   const addCase = () =>
@@ -36,7 +46,7 @@ export default function TestCases({ code, langId, compilerOptions }) {
   };
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-1 min-h-0 flex-col">
       <div className="flex items-center justify-between px-3 py-2 border-b border-[#30363d] shrink-0">
         <span className="text-xs font-semibold text-[#8b949e] uppercase tracking-wider">
           Test Cases

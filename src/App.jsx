@@ -1,11 +1,12 @@
 import { useState, useCallback, useRef, useEffect } from "react";
 import MonacoEditor from "@monaco-editor/react";
 import { Toaster, toast } from "react-hot-toast";
-import { Terminal, FlaskConical, FileCode, Copy, Download } from "lucide-react";
+import { Terminal, FlaskConical, FileCode, Copy } from "lucide-react";
 import Navbar from "./components/Navbar";
 import SnippetPanel from "./components/SnippetPanel";
 import TestCases from "./components/TestCases";
 import ShortcutsModal from "./components/ShortcutsModal";
+import CodeforcesImport from "./components/CodeforcesImport";
 import { useKeyboardShortcuts } from "./hooks/useKeyboardShortcuts";
 import { LANGUAGES, CPP_TEMPLATE, PYTHON_TEMPLATE, JAVA_TEMPLATE } from "./constants/snippets";
 import { runCode, getVerdict } from "./utils/judge0";
@@ -23,7 +24,9 @@ function loadFromUrl() {
   try {
     const p = new URLSearchParams(window.location.search);
     if (p.get("c")) return atob(p.get("c"));
-  } catch {}
+  } catch {
+    return null;
+  }
   return null;
 }
 
@@ -39,6 +42,9 @@ export default function App() {
   const [metrics, setMetrics]         = useState(null);
   const [showShortcuts, setShowShortcuts] = useState(false);
   const [snippetOpen, setSnippetOpen] = useState(false);
+  const [importedCases, setImportedCases] = useState(null);
+  const [importVersion, setImportVersion] = useState(0);
+  const [currentProblem, setCurrentProblem] = useState(null);
   const editorRef  = useRef(null);
   const monacoRef  = useRef(null);
   const runningRef = useRef(false);
@@ -135,6 +141,34 @@ export default function App() {
     if (newLang && oldLang && newLang.template !== oldLang.template) {
       setCode(TEMPLATES[newLang.template] || CPP_TEMPLATE);
       toast.success(`Loaded ${newLang.label} template`);
+    }
+  };
+
+  const handleCodeforcesImported = (problem, { fromCache = false } = {}) => {
+    const sampleCases = (problem.samples || []).map((sample) => ({
+      input: sample.input,
+      expected: sample.output,
+    }));
+
+    const previousKey = currentProblem?.problem
+      ? `${currentProblem.problem.contestId}${currentProblem.problem.index}`.toUpperCase()
+      : "";
+    const nextKey = problem.problem
+      ? `${problem.problem.contestId}${problem.problem.index}`.toUpperCase()
+      : "";
+
+    setCurrentProblem(problem);
+    setImportedCases(sampleCases);
+    setImportVersion((version) => version + 1);
+    if (!stdin.trim() && sampleCases[0]?.input) {
+      setStdin(sampleCases[0].input);
+    }
+    setTab("cases");
+
+    if (previousKey && previousKey === nextKey) {
+      toast.success("Codeforces samples refreshed");
+    } else {
+      toast.success(`${fromCache ? "Loaded cached" : "Imported"} ${problem.title}`);
     }
   };
 
@@ -427,11 +461,17 @@ export default function App() {
               </div>
             </>
           ) : (
-            <div className="flex-1 min-h-0 overflow-hidden">
+            <div className="flex flex-1 min-h-0 flex-col overflow-hidden">
+              <CodeforcesImport
+                onImported={handleCodeforcesImported}
+                currentProblem={currentProblem}
+              />
               <TestCases
+                key={importVersion}
                 code={code}
                 langId={currentLang.value}
                 compilerOptions={currentLang.compilerOptions}
+                importedCases={importedCases}
               />
             </div>
           )}
