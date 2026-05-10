@@ -92,7 +92,7 @@ export default function TestCases({ code, langId, compilerOptions, importedCases
                   onChange={(e) => update(tc.id, "input", e.target.value)}
                   onKeyDown={(e) => e.stopPropagation()}
                   placeholder="stdin…"
-                  rows={2}
+                  rows={4}
                   className="w-full bg-[#0d1117] border border-[#30363d] rounded p-1.5 text-[11px] text-[#e6edf3] placeholder-[#484f58] resize-none outline-none font-mono"
                 />
               </div>
@@ -103,7 +103,7 @@ export default function TestCases({ code, langId, compilerOptions, importedCases
                   onChange={(e) => update(tc.id, "expected", e.target.value)}
                   onKeyDown={(e) => e.stopPropagation()}
                   placeholder="expected…"
-                  rows={2}
+                  rows={4}
                   className="w-full bg-[#0d1117] border border-[#30363d] rounded p-1.5 text-[11px] text-[#e6edf3] placeholder-[#484f58] resize-none outline-none font-mono"
                 />
               </div>

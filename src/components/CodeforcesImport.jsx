@@ -72,7 +72,7 @@ export default function CodeforcesImport({ onImported, currentProblem }) {
             value={query}
             onChange={(event) => setQuery(event.target.value)}
             onKeyDown={(event) => event.stopPropagation()}
-            placeholder="Codeforces URL or 71A"
+            placeholder="Enter Codeforces problem URL or ID (e.g., 71A)"
             disabled={busy}
             className="min-w-0 flex-1 rounded-md border border-[#30363d] bg-[#161b22] px-2.5 py-1.5 text-xs text-[#e6edf3] placeholder-[#484f58] outline-none transition-colors focus:border-[#58a6ff] disabled:opacity-60"
           />

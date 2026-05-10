@@ -7,7 +7,9 @@ import SnippetPanel from "./components/SnippetPanel";
 import TestCases from "./components/TestCases";
 import ShortcutsModal from "./components/ShortcutsModal";
 import CodeforcesImport from "./components/CodeforcesImport";
+import ResizeHandle from "./components/ResizeHandle";
 import { useKeyboardShortcuts } from "./hooks/useKeyboardShortcuts";
+import { usePanelResize } from "./hooks/usePanelResize";
 import { LANGUAGES, CPP_TEMPLATE, PYTHON_TEMPLATE, JAVA_TEMPLATE } from "./constants/snippets";
 import { runCode, getVerdict } from "./utils/judge0";
 import { modLabel } from "./utils/platform";
@@ -45,9 +47,18 @@ export default function App() {
   const [importedCases, setImportedCases] = useState(null);
   const [importVersion, setImportVersion] = useState(0);
   const [currentProblem, setCurrentProblem] = useState(null);
+
   const editorRef  = useRef(null);
   const monacoRef  = useRef(null);
   const runningRef = useRef(false);
+
+  // Resize refs
+  const splitRef = useRef(null); // horizontal: editor | right panel
+  const rightRef = useRef(null); // vertical: input | output
+
+  // Resize state
+  const [editorW,  onEditorDrag,  resetEditorW] = usePanelResize(60, 20, 80);
+  const [inputH,   onInputDrag,   resetInputH]  = usePanelResize(38, 15, 75);
 
   const currentLang = LANGUAGES[langIndex] || LANGUAGES[0];
 
@@ -96,7 +107,6 @@ export default function App() {
     setRunning(false);
   }, [code, stdin, currentLang]);
 
-  // Format using clang-format WASM — preserves undo stack
   const handleFormat = useCallback(async () => {
     const editor = editorRef.current;
     const monaco = monacoRef.current;
@@ -105,7 +115,6 @@ export default function App() {
       const formatted = await formatCode(code, currentLang.template);
       const model = editor.getModel();
       const fullRange = model.getFullModelRange();
-      // pushEditOperations preserves the undo stack
       editor.pushUndoStop();
       editor.executeEdits("clang-format", [{
         range: fullRange,
@@ -173,106 +182,103 @@ export default function App() {
   };
 
   const handleEditorMount = (editor, monaco) => {
-  editorRef.current = editor;
-  monacoRef.current = monaco;
+    editorRef.current = editor;
+    monacoRef.current = monaco;
 
-  monaco.editor.defineTheme("github-dark", {
-    base: "vs-dark",
-    inherit: true,
-    rules: [
-      { token: "comment",  foreground: "8b949e", fontStyle: "italic" },
-      { token: "keyword",  foreground: "ff7b72" },
-      { token: "string",   foreground: "a5d6ff" },
-      { token: "number",   foreground: "79c0ff" },
-      { token: "type",     foreground: "ffa657" },
-      { token: "function", foreground: "d2a8ff" },
-      { token: "variable", foreground: "e6edf3" },
-      { token: "operator", foreground: "ff7b72" },
-    ],
-    colors: {
-      "editor.background":                  "#0d1117",
-      "editor.foreground":                  "#e6edf3",
-      "editor.lineHighlightBackground":     "#161b22",
-      "editorLineNumber.foreground":        "#484f58",
-      "editorLineNumber.activeForeground":  "#e6edf3",
-      "editor.selectionBackground":         "#264f7840",
-      "editorCursor.foreground":            "#58a6ff",
-      "editor.inactiveSelectionBackground": "#1f2937",
-    },
-  });
-  monaco.editor.setTheme("github-dark");
-  registerCppIntellisense(monaco);
+    monaco.editor.defineTheme("github-dark", {
+      base: "vs-dark",
+      inherit: true,
+      rules: [
+        { token: "comment",  foreground: "8b949e", fontStyle: "italic" },
+        { token: "keyword",  foreground: "ff7b72" },
+        { token: "string",   foreground: "a5d6ff" },
+        { token: "number",   foreground: "79c0ff" },
+        { token: "type",     foreground: "ffa657" },
+        { token: "function", foreground: "d2a8ff" },
+        { token: "variable", foreground: "e6edf3" },
+        { token: "operator", foreground: "ff7b72" },
+      ],
+      colors: {
+        "editor.background":                  "#0d1117",
+        "editor.foreground":                  "#e6edf3",
+        "editor.lineHighlightBackground":     "#161b22",
+        "editorLineNumber.foreground":        "#484f58",
+        "editorLineNumber.activeForeground":  "#e6edf3",
+        "editor.selectionBackground":         "#264f7840",
+        "editorCursor.foreground":            "#58a6ff",
+        "editor.inactiveSelectionBackground": "#1f2937",
+      },
+    });
+    monaco.editor.setTheme("github-dark");
+    registerCppIntellisense(monaco);
 
-  // Cmd+L → select entire current line
-  editor.addAction({
-    id: "select-current-line",
-    label: "Select Current Line",
-    keybindings: [monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyL],
-    run: (ed) => {
-      const pos     = ed.getPosition();
-      const model   = ed.getModel();
-      const lineLen = model.getLineLength(pos.lineNumber);
-      ed.setSelection(
-        new monaco.Range(pos.lineNumber, 1, pos.lineNumber, lineLen + 1)
-      );
-    },
-  });
+    editor.addAction({
+      id: "select-current-line",
+      label: "Select Current Line",
+      keybindings: [monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyL],
+      run: (ed) => {
+        const pos     = ed.getPosition();
+        const model   = ed.getModel();
+        const lineLen = model.getLineLength(pos.lineNumber);
+        ed.setSelection(
+          new monaco.Range(pos.lineNumber, 1, pos.lineNumber, lineLen + 1)
+        );
+      },
+    });
 
-  // Intercept Cmd+← and Cmd+Shift+← directly on the editor DOM node
-  // macOS grabs these before Monaco sees them — we re-fire as Monaco commands
-  const editorDom = editor.getDomNode();
-  if (editorDom) {
-    editorDom.addEventListener("keydown", (e) => {
-      const isMac = navigator.platform.toUpperCase().includes("MAC");
-      const mod   = isMac ? e.metaKey : e.ctrlKey;
-      if (!mod) return;
+    const editorDom = editor.getDomNode();
+    if (editorDom) {
+      editorDom.addEventListener("keydown", (e) => {
+        const isMac = navigator.platform.toUpperCase().includes("MAC");
+        const mod   = isMac ? e.metaKey : e.ctrlKey;
+        if (!mod) return;
 
-      if (e.key === "ArrowLeft") {
-        e.preventDefault();
-        e.stopImmediatePropagation();
-        if (e.shiftKey) {
-          editor.trigger("keyboard", "cursorHomeSelect", {});
-        } else {
-          editor.trigger("keyboard", "cursorHome", {});
+        if (e.key === "ArrowLeft") {
+          e.preventDefault();
+          e.stopImmediatePropagation();
+          if (e.shiftKey) {
+            editor.trigger("keyboard", "cursorHomeSelect", {});
+          } else {
+            editor.trigger("keyboard", "cursorHome", {});
+          }
+          return;
         }
-        return;
-      }
 
-      if (e.key === "ArrowRight") {
-        e.preventDefault();
-        e.stopImmediatePropagation();
-        if (e.shiftKey) {
-          editor.trigger("keyboard", "cursorEndSelect", {});
-        } else {
-          editor.trigger("keyboard", "cursorEnd", {});
+        if (e.key === "ArrowRight") {
+          e.preventDefault();
+          e.stopImmediatePropagation();
+          if (e.shiftKey) {
+            editor.trigger("keyboard", "cursorEndSelect", {});
+          } else {
+            editor.trigger("keyboard", "cursorEnd", {});
+          }
+          return;
         }
-        return;
-      }
 
-      if (e.key === "ArrowUp") {
-        e.preventDefault();
-        e.stopImmediatePropagation();
-        if (e.shiftKey) {
-          editor.trigger("keyboard", "cursorTopSelect", {});
-        } else {
-          editor.trigger("keyboard", "cursorTop", {});
+        if (e.key === "ArrowUp") {
+          e.preventDefault();
+          e.stopImmediatePropagation();
+          if (e.shiftKey) {
+            editor.trigger("keyboard", "cursorTopSelect", {});
+          } else {
+            editor.trigger("keyboard", "cursorTop", {});
+          }
+          return;
         }
-        return;
-      }
 
-      if (e.key === "ArrowDown") {
-        e.preventDefault();
-        e.stopImmediatePropagation();
-        if (e.shiftKey) {
-          editor.trigger("keyboard", "cursorBottomSelect", {});
-        } else {
-          editor.trigger("keyboard", "cursorBottom", {});
+        if (e.key === "ArrowDown") {
+          e.preventDefault();
+          e.stopImmediatePropagation();
+          if (e.shiftKey) {
+            editor.trigger("keyboard", "cursorBottomSelect", {});
+          } else {
+            editor.trigger("keyboard", "cursorBottom", {});
+          }
+          return;
         }
-        return;
-      }
-    }, true); // capture:true — fires before macOS swallows it
-  }
-};
+      }, true);
+    }
+  };
 
   const insertSnippet = (snippet) => {
     if (editorRef.current) {
@@ -315,10 +321,11 @@ export default function App() {
 
       {showShortcuts && <ShortcutsModal onClose={() => setShowShortcuts(false)} />}
 
-      <div className="split-pane flex-1 min-h-0">
+      {/* Main horizontal split: Editor | Right Panel */}
+      <div ref={splitRef} className="flex flex-1 min-h-0 overflow-hidden">
 
         {/* ── LEFT: Editor ── */}
-        <div className="editor-pane" style={{ width: "60%" }}>
+        <div className="flex flex-col min-h-0 min-w-0" style={{ width: `${editorW}%` }}>
           <div className="flex items-center px-3 py-1 bg-[#161b22] border-b border-[#30363d] gap-2 shrink-0">
             <FileCode size={12} className="text-[#8b949e]" />
             <span className="text-xs text-[#8b949e]">{getFileName()}</span>
@@ -393,8 +400,17 @@ export default function App() {
           </div>
         </div>
 
-        {/* ── RIGHT: I/O ── */}
-        <div className="right-pane" style={{ width: "40%" }}>
+        {/* Horizontal resize handle */}
+        <ResizeHandle
+          axis="x"
+          onMouseDown={(e) => onEditorDrag(e, "x", splitRef)}
+          onReset={resetEditorW}
+        />
+
+        {/* ── RIGHT: I/O + Test Cases ── */}
+        <div className="flex flex-col flex-1 min-h-0 min-w-0">
+
+          {/* Tabs */}
           <div className="flex border-b border-[#30363d] shrink-0">
             {[
               { id: "io",    icon: <Terminal size={12} />,     label: "I/O" },
@@ -415,8 +431,10 @@ export default function App() {
           </div>
 
           {tab === "io" ? (
-            <>
-              <div className="io-section" style={{ flex: "0 0 38%" }}>
+            <div ref={rightRef} className="flex flex-col flex-1 min-h-0">
+
+              {/* Input */}
+              <div className="flex flex-col min-h-0" style={{ height: `${inputH}%` }}>
                 <div className="px-3 py-1.5 border-b border-[#30363d] shrink-0">
                   <span className="text-[10px] font-semibold text-[#8b949e] uppercase tracking-wider">
                     stdin / Input
@@ -427,12 +445,20 @@ export default function App() {
                   onChange={(e) => setStdin(e.target.value)}
                   onKeyDown={(e) => e.stopPropagation()}
                   placeholder="Paste your input here…"
-                  className="flex-1 w-full bg-transparent text-[#e6edf3] placeholder-[#484f58] p-3 resize-none outline-none font-mono text-[13px]"
+                  className="flex-1 w-full bg-transparent text-[#e6edf3] placeholder-[#484f58] p-3 resize-none outline-none font-mono text-[13px] min-h-0"
                   spellCheck={false}
                 />
               </div>
 
-              <div className="io-section flex-1">
+              {/* Vertical resize handle: input | output */}
+              <ResizeHandle
+                axis="y"
+                onMouseDown={(e) => onInputDrag(e, "y", rightRef)}
+                onReset={resetInputH}
+              />
+
+              {/* Output */}
+              <div className="flex flex-col flex-1 min-h-0">
                 <div className="flex items-center justify-between px-3 py-1.5 border-b border-[#30363d] shrink-0">
                   <span className="text-[10px] font-semibold text-[#8b949e] uppercase tracking-wider">
                     Output
@@ -447,7 +473,7 @@ export default function App() {
                   )}
                 </div>
                 <pre
-                  className={`flex-1 p-3 text-[12px] font-mono overflow-auto whitespace-pre-wrap break-words ${
+                  className={`flex-1 p-3 text-[12px] font-mono overflow-auto whitespace-pre-wrap break-words min-h-0 ${
                     output.type === "error"   ? "text-[#f85149]" :
                     output.type === "running" ? "text-[#8b949e] running" :
                     output.type === "success" ? "text-[#3fb950]" :
@@ -459,7 +485,8 @@ export default function App() {
                    output.text}
                 </pre>
               </div>
-            </>
+
+            </div>
           ) : (
             <div className="flex flex-1 min-h-0 flex-col overflow-hidden">
               <CodeforcesImport
@@ -475,8 +502,8 @@ export default function App() {
               />
             </div>
           )}
-        </div>
 
+        </div>
       </div>
     </div>
   );
