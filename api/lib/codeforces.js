@@ -120,6 +120,9 @@ export function parseProblemHtml(html, source) {
   }
 
   const title = cleanText(statement.find(".header .title").first().text()) || pageTitle.replace("- Codeforces", "").trim();
+  const bodyClone = statement.clone();
+  bodyClone.find(".header, .input-specification, .output-specification, .sample-test, .note").remove();
+  const body = bodyClone.html() || "";
   const samples = parseSamples($);
 
   if (!samples.length) {
@@ -129,11 +132,15 @@ export function parseProblemHtml(html, source) {
   return {
     source,
     title,
+    body, 
     samples,
     sections: {
-      input: extractSection($, ".problem-statement .input-specification"),
+      inputHtml:  $(".problem-statement .input-specification").html() || "",
+      outputHtml: $(".problem-statement .output-specification").html() || "",
+      noteHtml:   $(".problem-statement .note").html() || "",
+      input:  extractSection($, ".problem-statement .input-specification"),
       output: extractSection($, ".problem-statement .output-specification"),
-      note: extractSection($, ".problem-statement .note"),
+      note:   extractSection($, ".problem-statement .note"),
     },
     metadata: parseMetadata($),
   };
