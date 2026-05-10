@@ -27,8 +27,9 @@ export default function SnippetPanel({ onInsert, langKey, externalOpen, onClose 
 
   // Sync external open trigger (from keyboard shortcut)
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (externalOpen) { setOpen(true); onClose?.(); }
-  }, [externalOpen]);
+  }, [externalOpen, onClose]);
 
   // Close on outside click
   useEffect(() => {

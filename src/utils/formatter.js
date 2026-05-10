@@ -42,6 +42,6 @@ export async function formatCode(code, langTemplate) {
     const filename = langTemplate === "java" ? "file.java" : "file.cpp";
     return formatFn(code, filename, CP_STYLE);
   } catch (e) {
-    throw new Error(e.message || "Format failed");
+    throw new Error(e.message || "Format failed", { cause: e });
   }
 }
